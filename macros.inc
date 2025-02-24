@@ -20,7 +20,7 @@ ENDM
 OPEN_FILE MACRO filename, mode, file_handle
     mov ah, 3Dh            ; Function: Open file
     mov al, mode           ; Mode: 0 = Read, 1 = Write, 2 = Read/Write
-    mov dx, filename       ; Pointer to filename
+    lea dx, filename       ; Pointer to filename
     int 21h                ; DOS Interrupt
     jc open_error          ; Jump if error (Carry Flag set)
     mov file_handle, ax    ; Store file handle
@@ -35,3 +35,23 @@ CLOSE_FILE MACRO file_handle
     int 21h                ; DOS Interrupt
     jc close_error         ; Jump if error (Carry Flag set)
 ENDM
+
+
+; ===================================
+; Macro: READ_FILE
+; ===================================
+; Reads 128 bytes from an open file
+; Parameters:
+;   file_handle - File handle in BX
+;   buffer_name - Name of the buffer
+; ===================================
+
+READ_FILE MACRO file_handle, buffer_name
+    mov ah, 3Fh              ; Function: Read from file
+    mov bx, file_handle      ; File handle
+    mov cx, 128              ; Number of bytes to read
+    lea dx, buffer_name      ; Load buffer address into DX
+    int 21h                  ; DOS interrupt
+    jc read_error            ; Jump if an error occurred
+ENDM
+
