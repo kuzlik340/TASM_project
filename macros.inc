@@ -4,16 +4,6 @@ PRINT MACRO msg
     int 21h                ; Call MS-DOS kernel
 ENDM
 
-NEWLINE MACRO
-    mov dl, 0Dh     ; Carriage Return
-    mov ah, 02h     ; DOS Function: Print Character
-    int 21h
-
-    mov dl, 0Ah     ; Line Feed
-    mov ah, 02h
-    int 21h
-ENDM
-
 ; ===========================
 ; Macro to open a file
 ; ===========================
@@ -22,7 +12,7 @@ OPEN_FILE MACRO filename, mode, file_handle
     mov al, mode           ; Mode: 0 = Read, 1 = Write, 2 = Read/Write
     lea dx, filename       ; Pointer to filename
     int 21h                ; DOS Interrupt
-    jc open_error          ; Jump if error (Carry Flag set)
+    jc err_open_file       ; Jump if error (Carry Flag set)
     mov file_handle, ax    ; Store file handle
 ENDM
 
@@ -33,7 +23,7 @@ CLOSE_FILE MACRO file_handle
     mov ah, 3Eh            ; Function: Close file
     mov bx, file_handle    ; Pass file handle
     int 21h                ; DOS Interrupt
-    jc close_error         ; Jump if error (Carry Flag set)
+    jc err_close_file        ; Jump if error (Carry Flag set)
 ENDM
 
 
@@ -52,6 +42,6 @@ READ_FILE MACRO file_handle, buffer_name
     mov cx, 128              ; Number of bytes to read
     lea dx, buffer_name      ; Load buffer address into DX
     int 21h                  ; DOS interrupt
-    jc read_error            ; Jump if an error occurred
+    jc err_read_file         ; Jump if an error occurred
 ENDM
 
