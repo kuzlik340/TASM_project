@@ -3,8 +3,6 @@
 
 INCLUDE macros.inc
 
-;EXTERN parser : FAR
-
 .data
     logo1 db ' _____  ___   _____  _____ ___________  ', '$'   ; Project logo
     logo2 db '| ___ \/ _ \ | ___ \/  ___|  ___| ___ \ ', '$'
@@ -28,11 +26,12 @@ INCLUDE macros.inc
     symbol db 5 dup('$')
 
 .code
+EXTRN print_num:near
 start:
     mov ax, @data                   ; Move start of data segment into DS register
     mov ds, ax 
 
-    mov sp, @stack                  ; Load stack into stack pointer
+    mov sp, 100h                    ; Load stack into stack pointer
     mov bp, sp                      ; Also load base pointer  ;;;;;;;; TODO
 
     mov ah, 62h                     ; Get PSP segment
@@ -45,7 +44,7 @@ start:
 
     mov al, es:[82h]                ; Check if we have some flag
     cmp al, '-'
-    jne parser
+    jne pars
 
     mov al, es:[83h]                ; Check if the flag is help then write help message
     cmp al, 'h'
@@ -66,7 +65,7 @@ err_undefined_flag:                 ; If the flag is undefined
 
 
 ; Main program 
-parser:                   
+pars:                   
     push ds                         ; Exchange registers before starting copying since
     push es                         ; movsb copies from ds:si to es:di
     pop ds
@@ -156,43 +155,13 @@ print_counter:
     PRINT bye_msg               
     pop dx
     mov ax, dx
-    call print_number
+    call print_num
     PRINT bye_msg2
     PRINT newline
 
 exit_program:
     mov ah, 4Ch
     int 21h
-
-; ============================================================================
-; Block of instructions to convert number that is >9 into decimal and print it
-; into the terminal.
-; ============================================================================
-print_number:
-    mov bx, 10          ; Делитель для выделения цифр
-    mov di, offset buffer ; Буфер для хранения цифр
-
-convert:
-    xor dx, dx          ; Обнуляем DX перед делением (важно для 16-битного деления)
-    div bx              ; AX / 10, AX = результат деления, DX = остаток
-    add dl, '0'         ; Преобразуем остаток (DX) в ASCII-символ
-    mov [di], dl        ; Сохраняем цифру в буфер
-    inc di
-    cmp ax, 0
-    jne convert         ; Продолжаем деление, пока AX != 0
-
-; Выводим цифры в правильном порядке
-print_loop:
-    dec di              ; Сдвигаем указатель назад для вывода цифр в правильном порядке
-    mov dl, [di]        ; Загружаем цифру в DL
-    mov ah, 02h         ; Функция DOS для вывода символа
-    int 21h             ; Печатаем символ
-    cmp di, offset buffer
-    jne print_loop
-    ret
-
-
-
 
 err_close_file:
     PRINT newline

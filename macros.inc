@@ -1,3 +1,6 @@
+; ===========================
+; Macro to print a message
+; ===========================
 PRINT MACRO msg
     mov dx, offset msg     ; This will load to DX register offset to the start of msg
     mov ah, 09h            ; This will call an API from MS-DOS to print prompt1
