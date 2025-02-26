@@ -71,8 +71,9 @@ start:
     cmp al, 'h'
     je display_help_message
     cmp al, 'p'
-    je pages_flag_set
-    jmp err_undefined_flag
+    jne err_undefined_flag
+    mov [flag_p], 1
+    jmp pars
 
 err_no_arguments:                   ; If there was no arguments while starting program
     PRINT newline
@@ -85,30 +86,6 @@ err_undefined_flag:                 ; If the flag is undefined
     PRINT undefined_flag_msg
     PRINT newline
     jmp exit_program
-
-display_help_message:
-;    PRINT logo1
-;    PRINT newline
-;    PRINT logo2
-;    PRINT newline
-;    PRINT logo3
-;    PRINT newline
-;    PRINT logo4
-;    PRINT newline
-;    PRINT logo5
-;    PRINT newline
-;    PRINT logo6
-;    PRINT newline
-;    PRINT newline
-;    PRINT help_msg1
-    PRINT newline
-    PRINT help_msg2
-    PRINT newline
-    jmp exit_program
-
-pages_flag_set:
-    mov [flag_p], 1
-    jmp pars
 
 ; Main program 
 pars:                   
@@ -132,9 +109,30 @@ copy:
     mov si, offset args_buffer
     jmp check_symbol_args
 
-update_si:
+update_si:                          ; If the flag -p is on the place than to read the name of file we should start from 85h
     mov si, 85h
     jmp copy
+
+display_help_message:
+    PRINT logo1
+    PRINT newline
+    PRINT logo2
+    PRINT newline
+    PRINT logo3
+    PRINT newline
+    PRINT logo4
+    PRINT newline
+    PRINT logo5
+    PRINT newline
+    PRINT logo6
+    PRINT newline
+    PRINT newline
+    PRINT help_msg1
+    PRINT newline
+    PRINT help_msg2
+    PRINT newline
+    jmp exit_program
+
 check_symbol_args:                  ; Check if the symbol that will be checked was inserted via command line
     mov al, [si]
     inc si
@@ -195,8 +193,9 @@ nested_loop:
     cmp al, ah                      ; Compare if same as symbol that we wrote
     jne skip_increment              ; Do not increment counter of appearance 
     inc dx
-    cmp dx, 25
-    je waait 
+    cmp dx, 24
+    jne meee
+    call waait
 meee:    
     mov [saved_reg1], ax
     mov [saved_reg2], bx
@@ -238,9 +237,8 @@ print_counter:
 wait_for_page:
     mov [saved_reg1], ax
     mov [saved_reg2], dx
-    mov dx, offset press_key
-    mov ah, 09h
-    int 21h
+    PRINT press_key
+    
 wait_key:  
     mov ah, 08h         ; Read key without echo
     int 21h
