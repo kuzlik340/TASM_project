@@ -31,9 +31,9 @@ INCLUDE macros.inc
     logo4 db '|  __/|  _  ||    /  `--. \  __||    /  ', '$'
     logo5 db '| |   | | | || |\ \ /\__/ / |___| |\ \  ', '$'
     logo6 db '\_|   \_| |_/\_| \_|\____/\____/\_| \_| ', '$'
-    help_msg1 db 'This program will count how many times the symbol appeared in the document. The symbol could be passed as an argument or just inserted from keyboard.', '$'
-    help_msg2 db 'To start the program please open it via MS-DOS like this "parser <filename> <symbol>" or "parser <filename>"', '$'
-    no_args_msg db 'No arguments were passed, shutting down. Please try the parser -h command.', '$'
+    help_msg1 db 'This program will write positions of specific symbol in document and will count how many times the symbol appeared in the document. The symbol could be passed as an argument or just inserted from keyboard.', '$'
+    help_msg2 db 'To start the program please open it via MS-DOS like this "main <filename> <symbol>" or "main <filename>". If you want to see the output as pages use -p flag before inserting filename.', '$'
+    no_args_msg db 'No arguments were passed, shutting down. Please try the main -h command.', '$'
     open_error_msg db 'The file could not be opened, shutting down.', '$'
     close_error_msg db 'The file could not be closed, shutting down.', '$'
     undefined_flag_msg db 'Undefined flag was used with program. You can use -h to see what this program is for.', '$'
@@ -41,13 +41,13 @@ INCLUDE macros.inc
     newline db 13, 10, '$'
     read_err_msg db 'Error while reading file', '$'
     prompt2 db 'Enter symbol: ', '$'
-    bye_msg db 'The symbol appeared ', '$'
+    stats_msg db 'The symbol appeared ', '$'
     press_key db 13, 10, 'Press enter to continue to new page...', '$'
-    bye_msg2 db ' times.', '$'
+    stats_msg2 db ' times.', '$'
     args_buffer db 128 dup(0)       ; Buffer for arguments from command line
     buffer db 128 dup('$')          ; Buffer for reading from file
     symbol db 5 dup('$')            ; Buffer for saving symbol
-    appearance_counter dw 0
+    appearance_counter dw 0         ; Space to store the counter for appearance of symbol
     flag_p db 0
 
 .code
@@ -121,22 +121,22 @@ display_help_message:
     jmp exit_program
 
 check_symbol_args:                  ; Check if the symbol that will be checked was inserted via command line
-    mov al, [si]
-    inc si
-    cmp al, 0
-    je ins_symbol_from_keyboard     ; If end of the buffer then
+    mov al, [si]                    ; Load sy,bol into AL register
+    inc si                          ; Increment pointer
+    cmp al, 0                       ; End of buffer??
+    je ins_symbol_from_keyboard     ; If end of the buffer then go to insert symbol from keyboard
     cmp al, ' '                     ; If we saw [SPACE] than it means that probably after that will be symbol
-    je checksym
+    je checksym                     
     jmp check_symbol_args           ; Cyklus pokial nestrstneme [space] alebo koniec riadku
 checksym:
     mov ah, [si]
     cmp ah, 0                       ; If there was no symbol
     je ins_symbol_from_keyboard
     push ax                         ; Macro will use AX register but we want to save symbol
-    OPEN_FILE args_buffer, 2, bx    
+    OPEN_FILE args_buffer, 2, bx    ; BX will have file handle
     pop ax
     mov dx, 0                       ; Set counter to 0  
-    mov di, 0                
+    mov di, 0                       ; 
     jmp main_loop
 
 ins_symbol_from_keyboard:
@@ -148,7 +148,7 @@ ins_symbol_from_keyboard:
     OPEN_FILE args_buffer, 2, bx
     mov ah, [symbol+2]
     mov dx, 0                       ; Set counter to 0 
-    mov di, 0 
+    mov di, 0                       
     jmp main_loop 
 
 err_open_file:                      ; If there was an error during opening file
@@ -162,6 +162,7 @@ err_open_file:                      ; If there was an error during opening file
 ; AX register - (AH - symbol) and (AL - char that we are reading at the moment)
 ; BX register - file descriptor
 ; CX register - nested loop iterator(CX <= 128)
+; DI register - current position in file
 ; ==============================================================================
 main_loop:
     push ax                         ; Save the symbol that we are comparing to
@@ -178,29 +179,29 @@ nested_loop:
     inc si                          ; Increment pointer on buffer
     inc di
     cmp al, ah                      ; Compare if same as symbol that we wrote
-    jne skip_increment              ; Do not increment counter of appearance 
-    inc dx
-    cmp dx, 24
-    jne skip_wait_for_paging
-    call end_page
+    jne skip_increment              ; Do not increment counter of appearance                          
+    cmp dx, 24                      ; Compare if DX is 23 already(we have to wait for user enter, all page is full)
+    jne skip_wait_for_paging        ; If DX is < 23 then just go to printing position      
+    call end_page                   ; If DX is 23 then call end_page
 skip_wait_for_paging:  
-    push ax
-    push bx
+    inc dx                          ; Increment DX  
+    push ax                         ; Saving registers info so we can restore them later
+    push bx                         ; All of the registers here will be used in PRINT macro or in print_num procedure
     push dx
     PRINT newline
     PRINT pos
     mov ax, di
-    mov bp, sp
-    call print_num 
-    mov sp, bp
-    pop dx
+    mov bp, sp                      ; Saving stack pointer(procedure will have its own stack and will overwrite SP register)
+    call print_num                  ; Write position of symbol into terminal
+    mov sp, bp                      ; Load previous SP into SP
+    pop dx                          ; Restore registers
     pop bx 
     pop ax
 skip_increment:                              
     loop nested_loop                ; Iterate through nested loop
     jmp main_loop                   ; If CX == 0 then go to main loop
 end_page:
-    cmp [flag_p], 1
+    cmp [flag_p], 1                 ; Check if we have flag for paging enabled
     jne skip_wait_for_paging
     call wait_for_page
     ret
@@ -213,27 +214,27 @@ err_read_file:                      ; If there was an error during reading file
     jmp exit_program
 
 print_counter:  
-    add [appearance_counter], dx
-    CLOSE_FILE bx        
-    PRINT newline                   
-    PRINT bye_msg               
+    add [appearance_counter], dx    ; This will add last symbols(since we are increasing number always by 24 because its size of page)
+    CLOSE_FILE bx                   
+    PRINT newline                   ; The block of instructions here will print the number of times when symbol appeared in document
+    PRINT stats_msg                         
     mov ax, [appearance_counter]
     call print_num
-    PRINT bye_msg2
+    PRINT stats_msg2
     jmp exit_program
 
 
 wait_for_page:
-    push ax
+    push ax                         ; Saving registers since they will be used in PRINT macro
     push dx
     PRINT press_key
     
 wait_for_the_key:  
-    mov ah, 08h                     ; Read key without echo
+    mov ah, 08h                     ; Read key by DOS call
     int 21h
-    cmp al, 13                      ; ENTER key?
-    jne wait_for_the_key
-    pop dx
+    cmp al, 13                      ; Waiting for enter key to be clicked by user
+    jne wait_for_the_key            ; Busy wait
+    pop dx                          ; Load previous info in registers
     pop ax
     add [appearance_counter], dx
     mov dx, 0
@@ -250,3 +251,12 @@ err_close_file:
     jmp exit_program    
 
 end start
+;                 H O W   T O    R U N    P R O G R A M
+; ===========================================================================
+; To run this code please use this commands in DOS:
+; 1) tasm main
+; 2) tasm printnum
+; 3) tlink main printnum
+; 4) main -h (to see what program is capable of)
+; 5) main <filename> <symbol>
+; ===========================================================================

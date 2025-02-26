@@ -31,12 +31,7 @@ ENDM
 
 
 ; ===================================
-; Macro: READ_FILE
-; ===================================
-; Reads 128 bytes from an open file
-; Parameters:
-;   file_handle - File handle in BX
-;   buffer_name - Name of the buffer
+; Macro to read file
 ; ===================================
 
 READ_FILE MACRO file_handle, buffer_name
@@ -48,6 +43,9 @@ READ_FILE MACRO file_handle, buffer_name
     jc err_read_file         ; Jump if an error occurred
 ENDM
 
+; ===================================
+; Macro to print logo of project
+; ===================================
 
 PRINT_LOGO MACRO
     PRINT logo1
