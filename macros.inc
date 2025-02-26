@@ -48,3 +48,18 @@ READ_FILE MACRO file_handle, buffer_name
     jc err_read_file         ; Jump if an error occurred
 ENDM
 
+
+PRINT_LOGO MACRO
+    PRINT logo1
+    PRINT newline
+    PRINT logo2
+    PRINT newline
+    PRINT logo3
+    PRINT newline
+    PRINT logo4
+    PRINT newline
+    PRINT logo5
+    PRINT newline
+    PRINT logo6
+    PRINT newline
+ENDM

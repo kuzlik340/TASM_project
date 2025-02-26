@@ -1,17 +1,24 @@
-; ===============================================================================
-; Task:     Number 4
-; Author:   Timofei Kuzin
+; ==================================================================================================
+; Task:             Number 4
+; Author:           Timofei Kuzin
 ;
-; Text:     Read a character and print the positions of all its occurrences in 
-;           the input. If the character is not provided as an argument, it will 
-;           be entered from the keyboard.
+; Text:             Read a character and print the positions of all its occurrences in 
+;                   the input. If the character is not provided as an argument, it will 
+;                   be entered from the keyboard.
 ;
-; Date:     26.02.2025
+; Bonus tasks:      1) Paging is enabled by flag -p (1 point)
+;                   2) MOVS instruction is used when copying arguments from PSP to buffer (1 point)
+;                   3) Extern procedure is used for printing decimal numbers (2 point)
+;                   4) Also the program counts how many times the symbol appeared in document. 
+;                   This bonus task is not listed but still was done by me.
+;                   5) Lots of comments in english and documentation in english (1 point)
+;
+; Date:             26.02.2025
 ;
 ; Academic year:    2
 ; Semester:         4
 ; Field of study:   informatika
-; ===============================================================================
+; ===================================================================================================
 .model small
 .stack 100h
 
@@ -40,40 +47,34 @@ INCLUDE macros.inc
     args_buffer db 128 dup(0)       ; Buffer for arguments from command line
     buffer db 128 dup('$')          ; Buffer for reading from file
     symbol db 5 dup('$')            ; Buffer for saving symbol
-    saved_reg1 dw ?
-    saved_reg2 dw ?
-    saved_reg3 dw ?
-    printed_lines_counter dw 0
+    appearance_counter dw 0
     flag_p db 0
 
 .code
-EXTRN print_num:near                ; WHY FAR??????? TODO
+EXTRN print_num:far                 ; Using far since the extern procedure is in the other code segment
 start:
     mov ax, @data                   ; Move start of data segment into DS register
     mov ds, ax 
-
-    mov sp, 100h                    ; Load stack into stack pointer
-    mov bp, sp                      ; Also load base pointer  ;;;;;;;; TODO
 
     mov ah, 62h                     ; Get PSP segment
     int 21h                         ; Call DOS
     mov es, bx                      ; Put the descriptor of PSP into es
 
     mov cl, es:[80h]                ; Get the number of bytes in PSP
-    cmp cl, 0               
+    cmp cl, 0                       ; If 0 bytes are in PSP then we have no arguments
     je err_no_arguments
 
     mov al, es:[82h]                ; Check if we have some flag
-    cmp al, '-'
-    jne pars
+    cmp al, '-'                     
+    jne parser
 
-    mov al, es:[83h]                ; Check if the flag is help then write help message
-    cmp al, 'h'
+    mov al, es:[83h]                
+    cmp al, 'h'                     ; Check if the flag is help then write help message
     je display_help_message
-    cmp al, 'p'
-    jne err_undefined_flag
-    mov [flag_p], 1
-    jmp pars
+    cmp al, 'p'                     ; Check if the flag is for paging then enable paging
+    jne err_undefined_flag          ; If the flag is not 'p' or 'h' then write error
+    mov [flag_p], 1                 ; Set flag as 1
+    jmp parser                        
 
 err_no_arguments:                   ; If there was no arguments while starting program
     PRINT newline
@@ -88,44 +89,30 @@ err_undefined_flag:                 ; If the flag is undefined
     jmp exit_program
 
 ; Main program 
-pars:                   
+parser:                   
     push ds                         ; Exchange registers before starting copying since
     push es                         ; movsb copies from ds:si to es:di
     pop ds
     pop es
 
-    mov di, offset args_buffer  
+    mov di, offset args_buffer      ; Prepare all registers for the movsb intruction    
     mov si, 82h
-    mov al, es:[flag_p]
-    cmp al, 1
-    je update_si  
+    mov al, es:[flag_p]             ;  If the flag is set then we have '-' on the 82h address and 'p'
+    cmp al, 0                       ; on the 83h with [space] on 84h so we have to set SI as 85h
+    je copy
+    mov si, 85h                     ; If the paging flag enabled set SI as 85h
 copy:    
-    cld                             ; ????????????? TODO
+    cld                             ; Clear direction flag to copy the line into buffer
     rep movsb                       ; Copy PSP into args_buffer
     push ds                         ; Exchange registers as they were before 
-    push es
-    pop ds
+    push es                         ; Set segment registers as they were before 
+    pop ds                           
     pop es
     mov si, offset args_buffer
-    jmp check_symbol_args
-
-update_si:                          ; If the flag -p is on the place than to read the name of file we should start from 85h
-    mov si, 85h
-    jmp copy
+    jmp check_symbol_args           ; Go to check if we have symbol that we want to check in document in the args
 
 display_help_message:
-    PRINT logo1
-    PRINT newline
-    PRINT logo2
-    PRINT newline
-    PRINT logo3
-    PRINT newline
-    PRINT logo4
-    PRINT newline
-    PRINT logo5
-    PRINT newline
-    PRINT logo6
-    PRINT newline
+    PRINT_LOGO
     PRINT newline
     PRINT help_msg1
     PRINT newline
@@ -137,10 +124,10 @@ check_symbol_args:                  ; Check if the symbol that will be checked w
     mov al, [si]
     inc si
     cmp al, 0
-    je ins_symbol_from_keyboard
+    je ins_symbol_from_keyboard     ; If end of the buffer then
     cmp al, ' '                     ; If we saw [SPACE] than it means that probably after that will be symbol
     je checksym
-    jmp check_symbol_args
+    jmp check_symbol_args           ; Cyklus pokial nestrstneme [space] alebo koniec riadku
 checksym:
     mov ah, [si]
     cmp ah, 0                       ; If there was no symbol
@@ -178,7 +165,7 @@ err_open_file:                      ; If there was an error during opening file
 ; ==============================================================================
 main_loop:
     push ax                         ; Save the symbol that we are comparing to
-    push dx                         ; Save counter of appearence of symbol
+    push dx                         ; Save counter of appearance of symbol
     READ_FILE bx, buffer            ; Read file into buffer of 128 bytes
     pop dx                          ; Load counter of appearance of symbol
     mov cx, ax                      ; Load into cx the number of bytes that could be read
@@ -194,27 +181,29 @@ nested_loop:
     jne skip_increment              ; Do not increment counter of appearance 
     inc dx
     cmp dx, 24
-    jne meee
-    call waait
-meee:    
-    mov [saved_reg1], ax
-    mov [saved_reg2], bx
-    mov [saved_reg3], dx
+    jne skip_wait_for_paging
+    call end_page
+skip_wait_for_paging:  
+    push ax
+    push bx
+    push dx
     PRINT newline
     PRINT pos
     mov ax, di
+    mov bp, sp
     call print_num 
-    mov ax, [saved_reg1] 
-    mov bx, [saved_reg2] 
-    mov dx, [saved_reg3]
+    mov sp, bp
+    pop dx
+    pop bx 
+    pop ax
 skip_increment:                              
     loop nested_loop                ; Iterate through nested loop
     jmp main_loop                   ; If CX == 0 then go to main loop
-waait:
+end_page:
     cmp [flag_p], 1
-    jne meee
+    jne skip_wait_for_paging
     call wait_for_page
-    jmp meee
+    ret
 
 err_read_file:                      ; If there was an error during reading file
     PRINT newline                       
@@ -224,29 +213,29 @@ err_read_file:                      ; If there was an error during reading file
     jmp exit_program
 
 print_counter:  
-    add [printed_lines_counter], dx
+    add [appearance_counter], dx
     CLOSE_FILE bx        
     PRINT newline                   
     PRINT bye_msg               
-    mov ax, [printed_lines_counter]
+    mov ax, [appearance_counter]
     call print_num
     PRINT bye_msg2
     jmp exit_program
 
 
 wait_for_page:
-    mov [saved_reg1], ax
-    mov [saved_reg2], dx
+    push ax
+    push dx
     PRINT press_key
     
-wait_key:  
-    mov ah, 08h         ; Read key without echo
+wait_for_the_key:  
+    mov ah, 08h                     ; Read key without echo
     int 21h
-    cmp al, 13          ; ENTER key?
-    jne wait_key
-    mov ax, [saved_reg1]
-    mov dx, [saved_reg2]
-    add [printed_lines_counter], dx
+    cmp al, 13                      ; ENTER key?
+    jne wait_for_the_key
+    pop dx
+    pop ax
+    add [appearance_counter], dx
     mov dx, 0
     ret
 

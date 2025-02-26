@@ -1,5 +1,5 @@
 .model small
-.stack
+.stack 10h
 
 ; ===============================================================================
 ; Procedure to convert number that is >9 into decimal and print it into the
@@ -14,7 +14,10 @@ PUBLIC print_num
 .code
 print_num PROC
 print_number:
+    push ds
     push si
+    mov si, @data
+    mov ds, si
     mov bx, 10                  ; Diviser for the decimal system 
     mov si, offset buffer_num   ; Save pointer on buffer
 
@@ -35,6 +38,7 @@ print_loop:
     cmp si, offset buffer_num
     jne print_loop              ; print untill start of buffer
     pop si
+    pop ds
     ret
 
 print_num ENDP
