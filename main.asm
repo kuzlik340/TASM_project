@@ -12,6 +12,7 @@
 ;                   4) Also the program counts how many times the symbol appeared in document. 
 ;                   This bonus task is not listed but still was done by me.
 ;                   5) Lots of comments in english and documentation in english (1 point)
+;                   6) Filename will be written into the terminal while paging is enabled
 ;
 ; Date:             26.02.2025
 ;
@@ -42,7 +43,8 @@ INCLUDE macros.inc
     read_err_msg db 'Error while reading file', '$'
     prompt2 db 'Enter symbol: ', '$'
     stats_msg db 'The symbol appeared ', '$'
-    press_key db 13, 10, 'Press enter to continue to new page...', '$'
+    press_key db 'Press enter to continue to new page...', '$'
+    file_read_msg db 'Currently working with file: ', '$'
     stats_msg2 db ' times.', '$'
     args_buffer db 128 dup(0)       ; Buffer for arguments from command line
     buffer db 128 dup('$')          ; Buffer for reading from file
@@ -87,7 +89,8 @@ err_undefined_flag:                 ; If the flag is undefined
     PRINT undefined_flag_msg
     PRINT newline
     jmp exit_program
-
+    
+; ------------------------------------------------------------------------------------------------
 ; Main program 
 parser:                   
     push ds                         ; Exchange registers before starting copying since
@@ -121,7 +124,7 @@ display_help_message:
     jmp exit_program
 
 check_symbol_args:                  ; Check if the symbol that will be checked was inserted via command line
-    mov al, [si]                    ; Load sy,bol into AL register
+    mov al, [si]                    ; Load symbol into AL register
     inc si                          ; Increment pointer
     cmp al, 0                       ; End of buffer??
     je ins_symbol_from_keyboard     ; If end of the buffer then go to insert symbol from keyboard
@@ -135,6 +138,7 @@ checksym:
     push ax                         ; Macro will use AX register but we want to save symbol
     OPEN_FILE args_buffer, 2, bx    ; BX will have file handle
     pop ax
+    mov BYTE PTR [si], '$'
     mov dx, 0                       ; Set counter to 0  
     mov di, 0                       ; 
     jmp main_loop
@@ -180,7 +184,7 @@ nested_loop:
     inc di
     cmp al, ah                      ; Compare if same as symbol that we wrote
     jne skip_increment              ; Do not increment counter of appearance                          
-    cmp dx, 24                      ; Compare if DX is 23 already(we have to wait for user enter, all page is full)
+    cmp dx, 23                      ; Compare if DX is 23 already(we have to wait for user enter, all page is full)
     jne skip_wait_for_paging        ; If DX is < 23 then just go to printing position      
     call end_page                   ; If DX is 23 then call end_page
 skip_wait_for_paging:  
@@ -205,6 +209,7 @@ end_page:
     jne skip_wait_for_paging
     call wait_for_page
     ret
+; ------------------------------------------------------------------------------------------------
 
 err_read_file:                      ; If there was an error during reading file
     PRINT newline                       
@@ -214,7 +219,7 @@ err_read_file:                      ; If there was an error during reading file
     jmp exit_program
 
 print_counter:  
-    add [appearance_counter], dx    ; This will add last symbols(since we are increasing number always by 24 because its size of page)
+    add [appearance_counter], dx    ; This will add last symbols(since we are increasing number always by 23 because its size of page)
     CLOSE_FILE bx                   
     PRINT newline                   ; The block of instructions here will print the number of times when symbol appeared in document
     PRINT stats_msg                         
@@ -223,10 +228,13 @@ print_counter:
     PRINT stats_msg2
     jmp exit_program
 
-
 wait_for_page:
     push ax                         ; Saving registers since they will be used in PRINT macro
     push dx
+    PRINT newline
+    PRINT file_read_msg
+    PRINT args_buffer
+    PRINT newline
     PRINT press_key
     
 wait_for_the_key:  
@@ -251,12 +259,18 @@ err_close_file:
     jmp exit_program    
 
 end start
-;                 H O W   T O    R U N    P R O G R A M
-; ===========================================================================
-; To run this code please use this commands in DOS:
-; 1) tasm main
-; 2) tasm printnum
-; 3) tlink main printnum
-; 4) main -h (to see what program is capable of)
-; 5) main <filename> <symbol>
-; ===========================================================================
+
+;                               H O W   T O    R U N    P R O G R A M
+; ==================================================================================================
+; To run this code please use this commands in DOS:   
+; 1) tasm main                                        
+; 2) tasm printnum                                    
+; 3) tlink main printnum                              
+; 4) main -h (to see what program is capable of)      
+; 5) main <filename> <symbol>                         
+; ==================================================================================================
+
+
+;                                E V A L U A T I O N   F O R   W O R K
+; ==================================================================================================
+; This program works in MS-DOS with its API. 
