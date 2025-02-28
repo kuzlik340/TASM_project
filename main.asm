@@ -12,7 +12,7 @@
 ;                   4) Also the program counts how many times the symbol appeared in document. 
 ;                   This bonus task is not listed but still was done by me.
 ;                   5) Lots of comments in english and documentation in english (1 point)
-;                   6) Filename will be written into the terminal while paging is enabled
+;                   6) Filename will be written into the terminal while paging is enabled (1 point)
 ;
 ; Date:             26.02.2025
 ;
@@ -47,6 +47,7 @@ INCLUDE macros.inc
     file_read_msg db 'Currently working with file: ', '$'
     stats_msg2 db ' times.', '$'
     args_buffer db 128 dup(0)       ; Buffer for arguments from command line
+    filename db 32 dup('$')
     buffer db 128 dup('$')          ; Buffer for reading from file
     symbol db 5 dup('$')            ; Buffer for saving symbol
     appearance_counter dw 0         ; Space to store the counter for appearance of symbol
@@ -126,7 +127,7 @@ display_help_message:
 check_symbol_args:                  ; Check if the symbol that will be checked was inserted via command line
     mov al, [si]                    ; Load symbol into AL register
     inc si                          ; Increment pointer
-    cmp al, 0                       ; End of buffer??
+    cmp al, 0                       ; End of buffer
     je ins_symbol_from_keyboard     ; If end of the buffer then go to insert symbol from keyboard
     cmp al, ' '                     ; If we saw [SPACE] than it means that probably after that will be symbol
     je checksym                     
@@ -138,12 +139,14 @@ checksym:
     push ax                         ; Macro will use AX register but we want to save symbol
     OPEN_FILE args_buffer, 2, bx    ; BX will have file handle
     pop ax
-    mov BYTE PTR [si], '$'
-    mov dx, 0                       ; Set counter to 0  
-    mov di, 0                       ; 
+    mov BYTE PTR [si], '$'          ; args_buffer will be used later to print name of file while paging
+    mov dx, 0                       ; Set printed lines counter to 0  
+    mov di, 0                       ; Set position in file to 0
     jmp main_loop
 
 ins_symbol_from_keyboard:
+    dec si
+    mov BYTE PTR [si], '$'          ; args_buffer will be used later to print name of file while paging
     PRINT prompt2 
     ; Read user input
     mov dx, offset symbol
@@ -151,8 +154,8 @@ ins_symbol_from_keyboard:
     int 21h
     OPEN_FILE args_buffer, 2, bx
     mov ah, [symbol+2]
-    mov dx, 0                       ; Set counter to 0 
-    mov di, 0                       
+    mov dx, 0                       ; Set printed lines counter to 0 
+    mov di, 0                       ; Set position in file to 0
     jmp main_loop 
 
 err_open_file:                      ; If there was an error during opening file
@@ -181,7 +184,7 @@ main_loop:
 nested_loop:
     mov al, [si]                    ; Load char from buffer
     inc si                          ; Increment pointer on buffer
-    inc di
+    inc di                          ; Increment position in file
     cmp al, ah                      ; Compare if same as symbol that we wrote
     jne skip_increment              ; Do not increment counter of appearance                          
     cmp dx, 23                      ; Compare if DX is 23 already(we have to wait for user enter, all page is full)
@@ -192,7 +195,7 @@ skip_wait_for_paging:
     push ax                         ; Saving registers info so we can restore them later
     push bx                         ; All of the registers here will be used in PRINT macro or in print_num procedure
     push dx
-    PRINT newline
+    PRINT newline                   ; Print position of symbol in file
     PRINT pos
     mov ax, di
     mov bp, sp                      ; Saving stack pointer(procedure will have its own stack and will overwrite SP register)
@@ -232,10 +235,10 @@ wait_for_page:
     push ax                         ; Saving registers since they will be used in PRINT macro
     push dx
     PRINT newline
-    PRINT file_read_msg
+    PRINT file_read_msg             ; Print file name on the page
     PRINT args_buffer
     PRINT newline
-    PRINT press_key
+    PRINT press_key                 ; Print prompt to click an enter, to go on other page
     
 wait_for_the_key:  
     mov ah, 08h                     ; Read key by DOS call
@@ -271,6 +274,34 @@ end start
 ; ==================================================================================================
 
 
+; ==================================================================================================
 ;                                E V A L U A T I O N   F O R   W O R K
 ; ==================================================================================================
-; This program works in MS-DOS with its API. 
+; The program successfully runs in MS-DOS, processing character input from both arguments and 
+; keyboard. It correctly finds and prints all occurrences of the given character in the file.
+; Also program prints how many times the symbol appeared in the document, and has user friendly 
+; paging mechanism to show the output as pages.
+;
+;                                   F U N C T I O N A L I T Y
+; - The program works as expected, including file handling and symbol counting.  
+; - Bonus tasks like paging and external procedure for number printing are implemented correctly.  
+; - Error handling is included for missing files and invalid input.  
+;
+;                                T E C H N I C A L   A S P E C T S
+; - Uses MOVSB instruction for efficient copying.  
+; - Integrates an external procedure for printing numbers.  
+; - Implements a paging system for better readability. 
+; - Prints filename when paging is enabled 
+;
+;                           P O S S I B L E    I M P R O V E M E N T S
+; - Could support files located deep in directories 
+; (i.e., filenames that are too long to open due to excessive directory depth)  
+; - Buffered output might improve performance for large files.  
+; - More user-friendly formatting in the terminal could be added(reverse output/navigation in pages).  
+;
+;                                        C O N C L U S I O N
+; - The program is well-structured and functional, meeting all task requirements.  
+; - The extra features make it more practical and user-friendly.
+; - Lots of comments in the code describe all the functionality of every instruction.  
+;
+; ==================================================================================================
