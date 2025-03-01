@@ -14,10 +14,10 @@ PUBLIC print_num
 .code
 print_num PROC
 print_number:
-    push ds
-    push si
+    push ds                     ; Save the data segment for main dats segment
+    push si                     ; This register will be used here to load data into buffer
     mov si, @data
-    mov ds, si
+    mov ds, si                  ; Set DS register for data in this procedure
     mov bx, 10                  ; Diviser for the decimal system 
     mov si, offset buffer_num   ; Save pointer on buffer
 
@@ -37,7 +37,7 @@ print_loop:
     int 21h                     ; call DOS
     cmp si, offset buffer_num
     jne print_loop              ; print untill start of buffer
-    pop si
+    pop si                      ; Return all registers into before state
     pop ds
     ret
 
