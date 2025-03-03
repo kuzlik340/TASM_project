@@ -292,17 +292,12 @@ end start
 ; - Implements a paging system for better readability. 
 ; - Prints filename when paging is enabled 
 ;
-;                           P O S S I B L E    I M P R O V E M E N T S
+;                               P O S S I B L E    I M P R O V E M E N T S
 ; - Could support files located deep in directories 
 ; (i.e., filenames that are too long to open due to excessive directory depth)  
 ; - Buffered output might improve performance for large files.  
 ; - More user-friendly formatting in the terminal could be added(reverse output/navigation in pages).
-; - Could support files that are larger then 64KB  
-;
-;                                        C O N C L U S I O N
-; - The program is well-structured and functional, meeting all task requirements.  
-; - The extra features make it more practical and user-friendly.
-; - Lots of comments in the code describe all the functionality of every instruction. 
+; - Could support files that are larger then 64KB   
 ;
 ;                                            T E S T I N G 
 ;  The file was tested with 65535 bytes document containing 'Lorem Ipsum' text and other smaller
@@ -310,7 +305,8 @@ end start
 ; of symbols after 65535 byte of document will start from 0 again. Also in the situation when file
 ; file will contain only 'a' and we will search for the 'a' symbol the counter of appearance will 
 ; be overflowed. Still the code works for almost all input, except large files.
-;                                           C O N C L U S I O N
+; 
+;                                          C O N C L U S I O N
 ;  This program works for lots of input. It uses 128 byte buffer to read file segemnts and then 
 ; program reads sy,bols from 128 byte buffer. Program implmenets paging and user-friendly interface
 ; with lots of comments near almost every instruction.
