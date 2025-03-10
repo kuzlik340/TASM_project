@@ -58,6 +58,9 @@ start:
     mov ax, @data                   ; Move start of data segment into DS register
     mov ds, ax 
 
+    mov ax, @stack                  ; Move start of stack segment into SP register
+    mov sp, ax
+
     mov ah, 62h                     ; Get PSP segment
     int 21h                         ; Call DOS
     mov es, bx                      ; Put the descriptor of PSP into es
@@ -186,9 +189,9 @@ nested_loop:
     cmp al, ah                      ; Compare if same as symbol that user inserted
     jne skip_increment              ; Do not increment counter of appearance if not equal                         
     cmp dx, 23                      ; If 23 lines printed, wait for user input before continuing
-    jne skip_wait_for_paging        ; If DX is < 23 then just go to printing position      
+    jne continue_processing         ; If DX is < 23 then just go to printing position      
     jmp end_page                    ; If DX is 23 then call end_page
-skip_wait_for_paging:  
+continue_processing:  
     inc dx                          ; Increment DX  
     push ax                         ; Saving registers info so we can restore them later
     push bx                         ; All of the registers here will be used in PRINT macro or in print_num procedure
@@ -207,9 +210,9 @@ skip_increment:
     jmp main_loop                   ; If CX == 0 then go to main loop
 end_page:
     cmp [flag_p], 1                 ; Check if we have flag for paging enabled
-    jne skip_wait_for_paging        ; If not then just go print other pages
-    call wait_for_page              ; If it is then wait for 'Enter' to be clicked
-    jmp skip_wait_for_paging        ; And then go print other lines
+    jne continue_processing         ; If not then just go print other pages
+    je wait_for_page                ; If it is then wait for 'Enter' to be clicked
+    jmp continue_processing         ; And then go print other lines
 ; ------------------------------------------------------------------------------------------------
 
 err_read_file:                      ; If there was an error during reading file
@@ -225,8 +228,10 @@ print_counter:
     CLOSE_FILE bx                   
     PRINT newline                   ; The block of instructions here will print the number of times when symbol appeared in document
     PRINT stats_msg                         
-    mov ax, [appearance_counter]    
+    mov ax, [appearance_counter]
+    mov bp, sp    
     call print_num                  ; Call extern procedure to print decimal number
+    mov sp, bp 
     PRINT stats_msg2
     jmp exit_program
 
@@ -248,7 +253,7 @@ wait_for_the_key:                   ; Block of instructions to wait for user to 
     pop ax
     add [appearance_counter], dx    ; Increment the appearance counter by 23
     mov dx, 0                       ; Set DX as zero since we will print new page
-    ret
+    jmp continue_processing       
 
 exit_program:                       
     mov ah, 4Ch

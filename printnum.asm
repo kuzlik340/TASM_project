@@ -1,5 +1,4 @@
-.model small
-.stack 10h
+.model tiny
 
 ; ===============================================================================
 ; Procedure to convert number that is >9 into decimal and print it into the
