@@ -20,6 +20,19 @@
 ; Semester:         4
 ; Field of study:   informatika
 ; ===================================================================================================
+
+
+;                               H O W   T O    R U N    P R O G R A M
+; ==================================================================================================
+; To run this code please use this commands in DOS:   
+; 1) tasm main                                        
+; 2) tasm printnum                                    
+; 3) tlink main printnum                              
+; 4) main -h (to see what program is capable of)      
+; 5) main <filename> <symbol>                         
+; ==================================================================================================
+
+
 .model small
 .stack 100h
 
@@ -267,17 +280,6 @@ err_close_file:                     ; When file could not be closed properly
 
 end start
 
-;                               H O W   T O    R U N    P R O G R A M
-; ==================================================================================================
-; To run this code please use this commands in DOS:   
-; 1) tasm main                                        
-; 2) tasm printnum                                    
-; 3) tlink main printnum                              
-; 4) main -h (to see what program is capable of)      
-; 5) main <filename> <symbol>                         
-; ==================================================================================================
-
-
 ; ==================================================================================================
 ;                                E V A L U A T I O N   F O R   W O R K
 ; ==================================================================================================
@@ -291,11 +293,6 @@ end start
 ; - Bonus tasks like paging and external procedure for number printing are implemented correctly.  
 ; - Error handling is included for missing files and invalid input.  
 ;
-;                                T E C H N I C A L   A S P E C T S
-; - Uses MOVSB instruction for efficient copying.  
-; - Integrates an external procedure for printing numbers.  
-; - Implements a paging system for better readability. 
-; - Prints filename when paging is enabled 
 ;
 ;                               P O S S I B L E    I M P R O V E M E N T S
 ; - Could support files located deep in directories 
@@ -309,10 +306,10 @@ end start
 ; files also. The files that are larger then 64KB will be handled without error but the position
 ; of symbols after 65535 byte of document will start from 0 again. Also in the situation when file
 ; file will contain only 'a' and we will search for the 'a' symbol the counter of appearance will 
-; be overflowed. Still the code works for almost all input, except large files.
+; be overflowed. Still the code works for almost all input, except files that are larger then 64KB.
 ; 
 ;                                          C O N C L U S I O N
-;  This program works for lots of input. It uses 128 byte buffer to read file segemnts and then 
-; program reads sy,bols from 128 byte buffer. Program implmenets paging and user-friendly interface
+;  This program works for lots of input. It uses 128 byte buffer to read file segments and then 
+; program reads symbols from 128 byte buffer. Program implmenets paging and user-friendly interface
 ; with lots of comments near almost every instruction.
 ; ==================================================================================================
